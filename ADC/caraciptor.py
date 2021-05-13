@@ -28,8 +28,10 @@ def adc():
             start = mid + 1
     
     if end < 0:
+        print(start)
         return start
     else:
+        print(end)
         return end
 
 def analog(digital_voltage):
@@ -46,6 +48,7 @@ try:
 
     measurements = [] # [ (time0, volt0), (time1, volt1), ...]
     voltage = 0
+    raw = []
 
     GPIO.output(TroikaModulePin, 0)
     time.sleep(0.1)
@@ -55,18 +58,19 @@ try:
 
     while voltage < 250:
         voltage = adc()
+        raw.append(voltage)
         measurements.append((time.time() - START_TIME, analog(voltage)))
         time.sleep(0.002)
 
     GPIO.output(TroikaModulePin, 0)
     while voltage > 3:
         voltage = adc()
+        raw.append(voltage)
         measurements.append((time.time() - START_TIME, analog(voltage)))
         time.sleep(0.002)
 
-    numpy.savetxt('data.txt', measurements, fmt='%d %d')
+    numpy.savetxt('data.txt', raw, fmt='%d')
 
-    #otl9 staff
     dT = 0
     for i in range(1, len(measurements)):
         dT += measurements[i][0] - measurements[i-1][0]
@@ -75,8 +79,6 @@ try:
 
     with open("settings.txt", "w") as settings:
         settings.write(str(dT)+"\n"+str(dV))
-
-    ##########
 
     plt.plot([measure[0] for measure in measurements], 
              [measure[1] for measure in measurements])
@@ -90,6 +92,7 @@ try:
 finally:
 
     GPIO.cleanup()
+
 
 
 
