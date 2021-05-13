@@ -9,6 +9,8 @@ ComparePin = 4
 DAC = (26, 19, 13, 6, 5, 11, 9, 10)
 LEDS = (21, 20, 16, 12, 7, 8, 25, 24)
 
+MAX_VOLTAGE = 3.3 #V
+
 def num2pins(pins, num):
     for i in range(7, -1, -1):
         GPIO.output(pins[i], num % 2)
@@ -30,6 +32,9 @@ def adc():
     else:
         return end
 
+def analog(digital_voltage):
+    return MAX_VOLTAGE * digital_voltage / 255
+
 
 try:
 
@@ -39,25 +44,52 @@ try:
     GPIO.setup(DAC, GPIO.OUT)
     GPIO.setup(LEDS, GPIO.OUT)
 
-    measure = []
+    measurements = [] # [ (time0, volt0), (time1, volt1), ...]
     voltage = 0
 
+    GPIO.output(TroikaModulePin, 0)
+    time.sleep(0.1)
+
+    START_TIME = time.time()
     GPIO.output(TroikaModulePin, 1)
+
     while voltage < 250:
         voltage = adc()
-        measure.append(voltage)
-        # time.sleep(0.0001)
+        measurements.append((time.time() - START_TIME, analog(voltage)))
+        time.sleep(0.002)
 
     GPIO.output(TroikaModulePin, 0)
     while voltage > 3:
         voltage = adc()
-        measure.append(voltage)
+        measurements.append((time.time() - START_TIME, analog(voltage)))
         time.sleep(0.002)
 
-    numpy.savetxt('data.txt', measure, fmt='%d')
+    numpy.savetxt('data.txt', measurements, fmt='%d %d')
+
+    #otl9 staff
+    dT = 0
+    for i in range(1, len(measurements)):
+        dT += measurements[i][0] - measurements[i-1][0]
+    dT /= len(measurements) - 1
+    dV = MAX_VOLTAGE / 255
+
+    with open("settings.txt", "w") as settings:
+        settings.write(str(dT)+"\n"+str(dV))
+
+    ##########
+
+    plt.plot([measure[0] for measure in measurements], 
+             [measure[1] for measure in measurements])
+
+    plt.title('U(t)')
+    plt.xlabel('Время, с')
+    plt.ylabel('Напряжение, В')
+    plt.show()
 
 
 finally:
 
     GPIO.cleanup()
+
+
 
